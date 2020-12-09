@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body{
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+        }
+        canvas{
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="dinoGame"></canvas>
+</body>
+
+<script>
+    var c = document.getElementById("dinoGame");
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+
+    //screen size
+    var s = c.height;
+
+    var pen = c.getContext("2d");
+
+    //check spacebar
+    var spaceBarDown = false;
+
+    onkeydown = (e) => {
+        if(e.key == " "){
+            spaceBarDown = true;
+        }
+        e.preventDefault();
+    }
+
+    //gravity
+    var gravity = -0.001;
+
+    var time = 0;
+
+    //dinosaur
+    var dino = {
+        y: 0,
+        x:0.25,
+        yVelocity: 0,
+        speed: 0.004,
+        size: 0.05,
+        dead: false,
+        draw: function(){
+            pen.fillStyle = "magenta";
+            if(this.dead){
+                pen.fillStyle = "yellow";
+            }
+
+            // takes in an x, y, width, height
+            pen.fillRect(1/4 * s, (s - this.y * s) - (1/4) * s - 0.05 * s, 0.05 * s, 0.05 * s);
+        },
+        move: function(){
+            this.speed = 0.004 + (Math.log(time + 1)/1000);
+            this.yVelocity += gravity;
+            if(this.y <= 0){
+                this.yVelocity = 0;
+                this.y = 0;
+            }
+            
+            //&& is the same as "and" is python
+            if(spaceBarDown && this.y == 0){
+                this.yVelocity = 0.02;
+            }
+
+            this.y += this.yVelocity;
+
+            for(i of obstacles){
+                if(collidingTwoWay(this, i)){
+                    this.dead = true;
+                }
+            }
+        }
+    };
+
+    //list of obstacles;
+    var obstacles = [];
+
+    //constructor for obstacles
+    function obstacle(){
+        //add self to obstacles list
+        obstacles.push(this);
+
+        //"this" refers to itself
+        //right side of screen
+        this.x = c.width / c.height;
+        this.y = 0;
+
+        this.size = 0.05;
+
+        this.move = function(){
+            this.x -= dino.speed;
+        }
+        this.draw = function(){
+            pen.fillStyle = "cyan"
+            pen.fillRect(this.x * s, (s - this.y * s) - (1/4) * s - this.size * s, this.size * s, this.size * s);
+        }
+    }
+
+    //returns if o1 has a corner in o2
+    function colliding(o1, o2){
+
+        var corners = [
+            {x:o1.x, y:o1.y},
+            {x:o1.x + o1.size, y:o1.y},
+            {x:o1.x, y:o1.y + o1.size},
+            {x:o1.x + o1.size, y:o1.y + o1.size}
+        ];
+        for(j of corners){
+            if(pointInBox(j, o2)){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function pointInBox(pt, box){
+        return (pt.x >= box.x && pt.x <= box.x + box.size && pt.y >= box.y && pt.y <= box.y + box.size)
+    }
+
+    function collidingTwoWay(o1, o2){
+        //"||" is or
+        return colliding(o1, o2) || colliding(o2, o1);
+    }
+
+    var spawnTimer = 0;
+
+    //calling this 60 times a second
+    function update(){
+        time += 1/60;
+
+        //manage enemy spawns
+        spawnTimer -+ 1/60;
+        if(spawnTimer <= 0){
+            new obstacle();
+            spawnTimer = Math.random() * 2 + 1;
+        }
+
+        //clear the screen
+        pen.clearRect(0, 0, c.width, c.height);
+        
+        //draw the ground
+        pen.fillStyle = "black";
+        pen.fillRect(0, 3/4 * s, c.width, 0.25 * s);
+
+        //update all the enemies
+        for(i of obstacles){
+            i.move();
+            i.draw();
+        }
+
+        //update/draw the dino
+        dino.move();
+        dino.draw();
+
+        spaceBarDown = false;
+    }
+
+    //call the update function 60 times per second
+    setInterval(update, 1000/60);
+
+</script>
+
+</html>
